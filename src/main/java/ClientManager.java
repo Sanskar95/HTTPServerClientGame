@@ -3,13 +3,10 @@ import IO.InputReader;
 import IO.OutputWriter;
 import model.ResponseMessage;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.StringTokenizer;
@@ -27,6 +24,7 @@ public class ClientManager implements Runnable {
     private InputReader in;
     private OutputWriter out;
     private String receivedContents;
+    private String cookieName;
 
     public ClientManager( String name , Socket client ) {
         this.name = name;
@@ -54,6 +52,7 @@ public class ClientManager implements Runnable {
 
             if (startLine != null) {
                 receivedContents = startLine + "\r\n" + new String( in.read() ).trim();
+                System.out.println(receivedContents);
             }
 
             if (startLine == null || startLine.isEmpty() || startLine.isBlank()) {
@@ -89,7 +88,9 @@ public class ClientManager implements Runnable {
 
 
     private void GET_Handler( String path ) throws IOException {
-
+        if(!receivedContents.contains("Cookie")) {
+        resetFile();
+        }
         if (path.equalsIgnoreCase( "/" )) path = "/index.html";
 
         File file = new File( path.substring( 1 ) );
@@ -106,10 +107,10 @@ public class ClientManager implements Runnable {
         String data = receivedContents.substring( receivedContents.lastIndexOf( "number=" ) + "number=".length() );
         Path path = Paths.get("test.txt");
 
-        Boolean doesFileExist =
-                Files.exists(path,
-                        new LinkOption[]{ LinkOption.NOFOLLOW_LINKS });
-        if(doesFileExist){
+//        Boolean doesFileExist =
+//                Files.exists(path,
+//                        new LinkOption[]{ LinkOption.NOFOLLOW_LINKS });
+//        if(doesFileExist){
             String filename= "test.txt";
             FileWriter fw = new FileWriter(filename,true); //the true will append the new data
             String responseMessage= NumberGuessService.guessNumber(Integer.parseInt(data)).label;
@@ -121,18 +122,18 @@ public class ClientManager implements Runnable {
             fw.write( responseMessage+ '\n');//appends the string to the file
             fw.close();
 
-        }else
-        {
-            File file = new File( "test.txt");
-            file.createNewFile();
-        }
+//        }else
+//        {
+//            File file = new File( "test.txt");
+//            file.createNewFile();
+//        }
 
 
         String postReply = new String( FileIOManager.readFileBytes( "http_post.html" ) ).replaceFirst( "<h4> Result -> </h4>" , "<h4> Result ->" + new String(Files.readAllBytes(Paths.get("test.txt"))) + " </h4>" );
-        if(correctAnswerFlag){
-            File file = new File( "test.txt");
-            file.delete();
-        }
+//        if(correctAnswerFlag){
+//            File file = new File( "test.txt");
+//            file.delete();
+//        }
         HTTP_Write( "200 OK" , "text/html" , postReply.getBytes() );
     }
 
@@ -146,7 +147,8 @@ public class ClientManager implements Runnable {
         if (MMI != null) {
             out.writeLine( "Content-Type: " + MMI );
             out.writeLine( "Content-Length: " + contents.length );
-            out.writeLine( "Connection: close" );
+            out.writeLine( "Connection:  keep-alive");
+            out.writeLine("Set-Cookie: some_cookie");
         }
         out.writeLine();
         if (contents != null) out.write( contents );
@@ -158,5 +160,17 @@ public class ClientManager implements Runnable {
         out.close();
         in.close();
         client.close();
+    }
+
+    public String getCookieName() {
+        return cookieName;
+    }
+
+    public void setCookieName(String cookieName) {
+        this.cookieName = cookieName;
+    }
+
+    public void  resetFile() throws FileNotFoundException {
+        FileOutputStream writer = new FileOutputStream("test.txt");
     }
 }
