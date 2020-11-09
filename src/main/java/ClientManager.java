@@ -3,41 +3,22 @@ import IO.InputReader;
 import IO.OutputWriter;
 import model.ResponseMessage;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.Socket;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.StringTokenizer;
+import java.util.*;
 
 public class ClientManager implements Runnable {
 
-    private final String NOT_FOUND = "<html>\n" + "<head><title>404 Not Found</title></head>\n" +
-            "<body bgcolor=\"white\">\n" +
-            "<center><h1>404 Not Found</h1></center>\n" +
-            "<hr><center>:/</center>\n" +
-            "</body>\n" +
-            "</html>";
-    private String name;
     private Socket client;
     private InputReader in;
     private OutputWriter out;
     private String receivedContents;
-    private String cookieName;
+    Map<Integer, List<String>> map;
+    private String methodType;
 
-    public ClientManager( String name , Socket client ) {
-        this.name = name;
+    ClientManager(Socket client, Map<Integer, List<String>> map) {
         this.client = client;
-    }
-
-    ClientManager( Socket client ) {
-        this.client = client;
-        name = "Client";
-    }
-
-    void start() {
-        new Thread( this , name ).start();
+        this.map= map;
     }
 
     @Override
@@ -49,15 +30,17 @@ public class ClientManager implements Runnable {
 
             out = new OutputWriter( this.client.getOutputStream() );
             String startLine = in.readNextLine();
-
+            Integer cookieId = null;
             if (startLine != null) {
                 receivedContents = startLine + "\r\n" + new String( in.read() ).trim();
+
+                if(receivedContents.contains("Cookie")){
+                    cookieId=Integer.parseInt(receivedContents.split("clientId=")[1].split("\r")[0]);
+                }
                 System.out.println(receivedContents);
             }
 
             if (startLine == null || startLine.isEmpty() || startLine.isBlank()) {
-//				INVALID_Handler();
-//				HTTP_Write( "400 BAD REQUEST",null,null );
                 closeConnection();
             } else {
                 StringTokenizer stk;
@@ -67,14 +50,15 @@ public class ClientManager implements Runnable {
                 if (stk.hasMoreTokens()) httpType = stk.nextToken();
 
                 if (!httpType.equalsIgnoreCase( "HTTP/1.1" )) {
-                    INVALID_Handler();
+                    invalidHandler();
                 } else if (req.equalsIgnoreCase( "GET" )) {
-                    GET_Handler( path );
+                    this.setMethodType("GET");
+                    GETHandler(cookieId );
                 } else if (req.equalsIgnoreCase( "POST" )) {
-
-                    POST_Handler();
+                    this.setMethodType("POST");
+                    POSTHandler(cookieId);
                 } else {
-                    INVALID_Handler();
+                    invalidHandler();
                 }
             }
 
@@ -83,72 +67,53 @@ public class ClientManager implements Runnable {
         }
     }
 
-
-
-
-
-    private void GET_Handler( String path ) throws IOException {
-        if(!receivedContents.contains("Cookie")) {
-        resetFile();
+    private void GETHandler(Integer id) throws IOException {
+        List<String> responses = new ArrayList<>();
+        if(receivedContents.contains("Cookie")) {
+           responses= map.get(id);
+        }else{
+          GameServer.id= GameServer.id +1;
         }
-        if (path.equalsIgnoreCase( "/" )) path = "/index.html";
-
-        File file = new File( path.substring( 1 ) );
-
-        if (!file.canRead()) {
-            HTTP_Write( "404 NOT FOUND" , "text/html" , NOT_FOUND.getBytes() );
-        } else {
-            HTTP_Write( "200 OK" , Files.probeContentType( file.toPath() ) , FileIOManager.readFileBytes( file.getPath() ) );
-        }
+        String getReply = new String( FileIOManager.readFileBytes( "http_post.html" ) ).replaceFirst( "<h4> Result -> </h4>" , "<h4> Result ->" + responses+" </h4>" );
+        HTTPResponseHandler( "200 OK" , "text/html" , getReply.getBytes() );
     }
 
-    private void POST_Handler() throws IOException {
-        Boolean correctAnswerFlag = false;
+    private void POSTHandler(Integer id) throws IOException {
         String data = receivedContents.substring( receivedContents.lastIndexOf( "number=" ) + "number=".length() );
-        Path path = Paths.get("test.txt");
 
-//        Boolean doesFileExist =
-//                Files.exists(path,
-//                        new LinkOption[]{ LinkOption.NOFOLLOW_LINKS });
-//        if(doesFileExist){
-            String filename= "test.txt";
-            FileWriter fw = new FileWriter(filename,true); //the true will append the new data
+
             String responseMessage= NumberGuessService.guessNumber(Integer.parseInt(data)).label;
 
-            if(NumberGuessService.guessNumber(Integer.parseInt(data)).equals(ResponseMessage.EQUAL)){
-                responseMessage = responseMessage+ " " + Files.lines(Paths.get("test.txt"), Charset.defaultCharset()).count();
-                correctAnswerFlag = true;
+            if(Objects.isNull(map.get(id))){
+                List<String> responsesMessages = new ArrayList<>();
+                map.put(id, responsesMessages);
             }
-            fw.write( responseMessage+ '\n');//appends the string to the file
-            fw.close();
 
-//        }else
-//        {
-//            File file = new File( "test.txt");
-//            file.createNewFile();
-//        }
-
-
-        String postReply = new String( FileIOManager.readFileBytes( "http_post.html" ) ).replaceFirst( "<h4> Result -> </h4>" , "<h4> Result ->" + new String(Files.readAllBytes(Paths.get("test.txt"))) + " </h4>" );
-//        if(correctAnswerFlag){
-//            File file = new File( "test.txt");
-//            file.delete();
-//        }
-        HTTP_Write( "200 OK" , "text/html" , postReply.getBytes() );
+        if(NumberGuessService.guessNumber(Integer.parseInt(data)).equals(ResponseMessage.EQUAL)){
+            responseMessage = responseMessage + map.get(id).size();
+        }
+            List<String> responsesMessages = map.get(id);
+             responsesMessages.add(responseMessage);
+             map.put(id, responsesMessages);
+        String postReply = new String( FileIOManager.readFileBytes( "http_post.html" ) ).replaceFirst( "<h4> Result -> </h4>" , "<h4> Result ->" + map.get(id).toString() + " </h4>" );
+        HTTPResponseHandler( "200 OK" , "text/html" , postReply.getBytes() );
     }
 
-    private void INVALID_Handler() throws IOException {
-        HTTP_Write( "400 BAD REQUEST" , null , null );
+    private void invalidHandler() throws IOException {
+        HTTPResponseHandler( "400 BAD REQUEST" , null , null );
     }
 
 
-    private void HTTP_Write( String status , String MMI , byte[] contents ) throws IOException {
+    private void HTTPResponseHandler(String status , String MMI , byte[] contents ) throws IOException {
         out.writeLine( "HTTP/1.1 " + status );
         if (MMI != null) {
             out.writeLine( "Content-Type: " + MMI );
             out.writeLine( "Content-Length: " + contents.length );
             out.writeLine( "Connection:  keep-alive");
-            out.writeLine("Set-Cookie: some_cookie");
+            if(this.methodType.equals("GET")){
+                out.writeLine("Set-Cookie: clientId="+ GameServer.id+"; expires=Wednesday,31-Dec-20 21:00:00 GMT");
+            }
+
         }
         out.writeLine();
         if (contents != null) out.write( contents );
@@ -162,15 +127,7 @@ public class ClientManager implements Runnable {
         client.close();
     }
 
-    public String getCookieName() {
-        return cookieName;
-    }
-
-    public void setCookieName(String cookieName) {
-        this.cookieName = cookieName;
-    }
-
-    public void  resetFile() throws FileNotFoundException {
-        FileOutputStream writer = new FileOutputStream("test.txt");
+    public void setMethodType(String methodType) {
+        this.methodType = methodType;
     }
 }

@@ -9,10 +9,7 @@ public class OutputWriter {
 	public OutputWriter( OutputStream out ) {
 		outputStream = out;
 	}
-	
-	public void write(String msg) throws IOException {
-		write( msg.getBytes( "UTF-8" ) );
-	}
+
 	public void writeLine(String msg) throws IOException {
 		write( (msg+"\r\n").getBytes( "UTF-8" ) );
 	}
