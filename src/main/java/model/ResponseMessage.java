@@ -1,9 +1,9 @@
 package model;
 
 public enum ResponseMessage {
-   LOW("That's too low. Please guess higher: <br>"),
-    HIGH("That' too high. Please guess lower <br>"),
-   EQUAL("awesome, number of guesses you took are ");
+    LOW("That's too low. Please guess higher. <br>"),
+    HIGH("That' too high. Please guess lower. <br>"),
+    EQUAL("Correct guess. The number of guesses you took are ");
 
     public final String label;
 

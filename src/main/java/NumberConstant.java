@@ -1,3 +1,3 @@
 public class NumberConstant {
-    public static final Integer INTEGER=65;
+    public static final Integer INTEGER = 65;
 }
