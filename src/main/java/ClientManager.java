@@ -46,7 +46,7 @@ public class ClientManager implements Runnable {
 
             System.out.println(receivedContents);
 
-            StringTokenizer stk = new StringTokenizer( startLine , " " );
+            StringTokenizer stk = new StringTokenizer(startLine , " ");
             String req = stk.nextToken(), path = "", httpType = "";
 
             if(stk.hasMoreTokens()) path = stk.nextToken();
@@ -82,13 +82,13 @@ public class ClientManager implements Runnable {
         }
         String getReply = new String(FileIOManager.readFileBytes("http_post.html"))
                 .replaceFirst("<h4>Result -> </h4>", "<h4>Result ->" + responses + " </h4>");
-        HTTPResponseHandler("200 OK", "text/html", getReply.getBytes());
+        httpResponseHandler("200 OK", "text/html", getReply.getBytes());
     }
 
     private void postHandler(Integer id, String receivedContents) throws IOException {
         String data = receivedContents.substring(receivedContents.lastIndexOf("number=") + "number=".length());
 
-        String responseMessage = NumberGuessService.guessNumber(Integer.parseInt(data)).label;
+        String responseMessage = NumberGuessService.guessNumber(Integer.parseInt(data)).label + " <br>";
 
         if(Objects.isNull(clientGuessesMap.get(id))){
             List<String> responsesMessages = new ArrayList<>();
@@ -107,14 +107,14 @@ public class ClientManager implements Runnable {
                 .replaceFirst("<h4>Result -> </h4>", "<h4> Result ->"
                         + clientGuessesMap.get(id).toString() + " </h4>");
 
-        HTTPResponseHandler("200 OK", "text/html", postReply.getBytes());
+        httpResponseHandler("200 OK", "text/html", postReply.getBytes());
     }
 
     private void invalidHandler() throws IOException {
-        HTTPResponseHandler("400 BAD REQUEST", null, null);
+        httpResponseHandler("400 BAD REQUEST", null, null);
     }
 
-    private void HTTPResponseHandler(String status, String MMI, byte[] contents) throws IOException {
+    private void httpResponseHandler(String status, String MMI, byte[] contents) throws IOException {
         out.writeLine( "HTTP/1.1 " + status );
         if (MMI != null) {
             out.writeLine("Content-Type: " + MMI);

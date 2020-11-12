@@ -25,7 +25,7 @@ public class GameServer {
         Socket clientSocket;
         System.out.println( "Server started.\nListening for connections on port: " + port + " ...\n" );
 
-        while (true){
+        while(true) {
             clientSocket = serverSocket.accept();
             ClientManager clientManager = new ClientManager(clientSocket, clientGuessesMap);
             Thread thread = new Thread(clientManager);

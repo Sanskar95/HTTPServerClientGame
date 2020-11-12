@@ -6,8 +6,7 @@ import java.nio.file.Paths;
 
 public class FileIOManager {
 
-	public  static byte[] readFileBytes(String path) throws IOException {
-		return Files.readAllBytes( Paths.get( path ) );
+	public static byte[] readFileBytes(String path) throws IOException {
+		return Files.readAllBytes(Paths.get(path));
 	}
-	
 }

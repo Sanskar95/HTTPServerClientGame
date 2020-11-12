@@ -5,15 +5,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-
 public class InputReader {
 	
 	private BufferedReader bufferedReader;
 	
 	static final int INPUT_BUFFER_LENGTH = 1000;
 	
-	public InputReader( InputStream in ){
-		bufferedReader = new BufferedReader( new InputStreamReader( in ) );
+	public InputReader(InputStream in) {
+		bufferedReader = new BufferedReader(new InputStreamReader(in));
 	}
 	
 	public String readNextLine() throws IOException {
@@ -22,7 +21,7 @@ public class InputReader {
 	
 	public char[] read() throws IOException {
 		char[] ch = new char[INPUT_BUFFER_LENGTH];
-		bufferedReader.read( ch );
+		bufferedReader.read(ch);
 		return ch;
 	}
 	
