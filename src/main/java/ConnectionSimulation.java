@@ -7,13 +7,14 @@ import java.io.OutputStream;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class ConnectionSimulation {
 
     public static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36";
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
 
         if(args.length != 2) {
             System.out.println("Two arguments required: <port-number> <number-simulated-rounds>");
@@ -23,18 +24,17 @@ public class ConnectionSimulation {
         }
 
         int port = Integer.parseInt(args[0]);
-        URL url = new URL("http://localhost:" + port);
+        URL  url = new URL("http://localhost:5000/http_post.html");
+
 
         int numberOfRounds = Integer.parseInt(args[1]);
 
         double averageNumberOfTurns = 0.0;
 
         for(int i = 0; i < numberOfRounds; i++) {
-
             String clientId = performGetRequestToGetClientId(url);
 
-            int startingNumber = new Random().ints(1, 101)
-                    .findFirst().getAsInt();
+            int startingNumber = ThreadLocalRandom.current().nextInt(1, 100 + 1);
 
             int numberOfTurns = playRound(url, clientId, startingNumber);
 
@@ -45,7 +45,8 @@ public class ConnectionSimulation {
         System.out.println("Average number of turns per round: " + averageNumberOfTurns);
     }
 
-    private static int playRound(URL url, String clientId, int number) throws IOException {
+    private static int playRound(URL url, String clientId, int number) throws IOException, InterruptedException {
+
 
         int turnsToWin = 0;
 
@@ -71,21 +72,22 @@ public class ConnectionSimulation {
                 relevantResponsePart = splits[splits.length - 3];
             }
 
+
             if(relevantResponsePart.contains(ResponseMessage.LOW.label)) {
                 lowerBound = number + 1;
             }
-            else {
+            else if(relevantResponsePart.contains(ResponseMessage.HIGH.label) ){
                 upperBound = number - 1;
             }
-            number = lowerBound == upperBound ? lowerBound :
+            number = lowerBound == upperBound || lowerBound> upperBound ? lowerBound :
                     new Random().ints(lowerBound, upperBound).findFirst().getAsInt();
         }
 
         return turnsToWin;
     }
 
-    private static String performPostRequest(URL url, String clientId, String number) throws IOException {
-
+    private static String performPostRequest(URL url, String clientId, String number) throws IOException, InterruptedException {
+        Thread.sleep(1000);
         String jsonInputString = "number=" + number;
 
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
