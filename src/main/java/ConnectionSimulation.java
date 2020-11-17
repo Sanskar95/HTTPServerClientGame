@@ -24,7 +24,7 @@ public class ConnectionSimulation {
         }
 
         int port = Integer.parseInt(args[0]);
-        URL  url = new URL("http://localhost:5000/http_post.html");
+        URL  url = new URL("http://localhost:" + port + "/http_post.html");
 
 
         int numberOfRounds = Integer.parseInt(args[1]);
@@ -34,9 +34,10 @@ public class ConnectionSimulation {
         for(int i = 0; i < numberOfRounds; i++) {
             String clientId = performGetRequestToGetClientId(url);
 
-            int startingNumber = ThreadLocalRandom.current().nextInt(1, 100 + 1);
+            int startingNumber = ThreadLocalRandom.current().nextInt(1, numberOfRounds + 1);
 
             int numberOfTurns = playRound(url, clientId, startingNumber);
+            System.out.println("Number of turns needed in " + (i + 1) + ". round: " + numberOfTurns);
 
             averageNumberOfTurns = ((averageNumberOfTurns * i) + numberOfTurns) / (i + 1);
         }
@@ -79,7 +80,7 @@ public class ConnectionSimulation {
             else if(relevantResponsePart.contains(ResponseMessage.HIGH.label) ){
                 upperBound = number - 1;
             }
-            number = lowerBound == upperBound || lowerBound> upperBound ? lowerBound :
+            number = lowerBound == upperBound || lowerBound > upperBound ? lowerBound :
                     new Random().ints(lowerBound, upperBound).findFirst().getAsInt();
         }
 
@@ -87,8 +88,8 @@ public class ConnectionSimulation {
     }
 
     private static String performPostRequest(URL url, String clientId, String number) throws IOException, InterruptedException {
-        Thread.sleep(1000);
-        String jsonInputString = "number=" + number;
+
+        String inputString = "number=" + number;
 
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("POST");
@@ -99,7 +100,7 @@ public class ConnectionSimulation {
         connection.setDoOutput(true);
 
         try(OutputStream outputStream = connection.getOutputStream()) {
-            byte[] input = jsonInputString.getBytes(StandardCharsets.UTF_8);
+            byte[] input = inputString.getBytes(StandardCharsets.UTF_8);
             outputStream.write(input, 0, input.length);
         }
 
