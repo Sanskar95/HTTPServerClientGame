@@ -8,9 +8,9 @@ sequentially play a whole round of the game with the server automatically.
 
 To start the class `GamesServer`, you have to provide the port number it should listen to as an argument: 
 `java GameServer <port=number>`. The port number could for example be 5000. The server then starts and listens to the 
-provided port. The server reacts on HTTP/1.1 GET and POST requests and the connection is not encrypted. It ignores 
-specific paths and the interaction does not depend on them. Each time, a new thread of the class `ClientManager` is 
-started.
+provided port. The server reacts on HTTP/1.1 GET and POST requests and the connection is not encrypted. The server has 
+to be called with `http://<host-address>:<port-number>/http_post.html` to start the game. Each time, a new thread of 
+the class `ClientManager` is started.
 
 The client receives a question to guess the number between 1 and 100 which the server chose. After the clients sends 
 the guessed value via a field, it receives a statement whether the guess is too high, too low or correct. It can 
